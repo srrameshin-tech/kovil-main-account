@@ -302,6 +302,9 @@ function initFirebase(){
       settings = { openingBalance: 0, pin: '1973', ...snap.val() };
     }
     $('openingBalDisplay').textContent = fmt(settings.openingBalance || 0);
+  }, err => {
+    console.error('Settings listener error:', err);
+    toast('❌ Settings load error: ' + err.message);
   });
 
   db.ref(`${ROOT}/entries`).on('value', snap => {
@@ -319,6 +322,9 @@ function initFirebase(){
     });
     renderEntries();
     updateStats();
+  }, err => {
+    console.error('Entries listener error:', err);
+    toast('❌ Entries load error: ' + err.message);
   });
 }
 
@@ -439,12 +445,14 @@ window.saveEntry = () => {
   const payload = { type: currentType, date, name, amount, purpose, note, createdAt: existing ? (existing.createdAt || Date.now()) : Date.now() };
 
   if(editingId){
-    db.ref(ROOT + '/entries/' + editingId).set(payload);
-    toast('✅ Entry Updated');
+    db.ref(ROOT + '/entries/' + editingId).set(payload)
+      .then(() => { toast('✅ Entry Updated'); })
+      .catch((err) => { toast('❌ Error: ' + err.message); console.error('Save error:', err); });
   } else {
     const newRef = db.ref(ROOT + '/entries').push();
-    newRef.set(payload);
-    toast('✅ Entry Added');
+    newRef.set(payload)
+      .then(() => { toast('✅ Entry Added'); })
+      .catch((err) => { toast('❌ Error: ' + err.message); console.error('Save error:', err); });
   }
   closeEntryModal();
 };

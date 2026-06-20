@@ -14,6 +14,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{
   --bg:#080e1a;--sur:#0f1928;--sur2:#162035;--bdr:#1e3050;
@@ -107,6 +109,17 @@ input,select,textarea,button{font-family:inherit;}
 .opening-bal-box{background:linear-gradient(135deg,#1a3a1a,#0f2818);border:1px solid var(--green);border-radius:13px;padding:14px;margin-bottom:14px;text-align:center;}
 .opening-bal-box .lbl{font-size:12px;color:var(--tx2);}
 .opening-bal-box .val{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:var(--gold);margin-top:4px;}
+
+.rpt-tabs{display:flex;gap:6px;margin-bottom:16px;}
+.rpt-tab{flex:1;padding:10px 4px;text-align:center;border-radius:10px;border:1px solid var(--bdr);background:var(--sur2);color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;}
+.rpt-tab.on{background:rgba(13,122,62,.2);border-color:var(--green2);color:var(--income);}
+.rpt-panel{display:none;}
+.rpt-panel.on{display:block;}
+.month-row{display:flex;justify-content:space-between;align-items:center;background:var(--sur2);border:1px solid var(--bdr);border-radius:11px;padding:12px 14px;margin-bottom:8px;}
+.month-row .mname{font-weight:700;font-size:14px;}
+.month-row .mvals{text-align:right;font-size:12px;color:var(--tx2);}
+.month-row .mvals b{color:var(--gold);font-family:'Space Grotesk',sans-serif;font-size:14px;display:block;}
+.pdf-btn{width:100%;padding:13px;border-radius:11px;border:none;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-weight:700;font-size:14px;cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;}
 </style>
 </head>
 <body>
@@ -165,8 +178,9 @@ input,select,textarea,button{font-family:inherit;}
   <button class="fab" onclick="openEntryModal()">+</button>
 
   <div class="bottom-bar">
+    <button class="bb-btn" onclick="openReportsModal()">📊 Reports</button>
     <button class="bb-btn" onclick="openStatementModal()">📄 Statement</button>
-    <button class="bb-btn wa" onclick="shareFullStatement()">📲 Share Full</button>
+    <button class="bb-btn wa" onclick="shareFullStatement()">📲 Share</button>
   </div>
 </div>
 
@@ -221,6 +235,46 @@ input,select,textarea,button{font-family:inherit;}
       <label class="form-lbl">🔑 Change PIN</label>
       <input type="password" id="newPin" class="form-inp" placeholder="New PIN" maxlength="6" inputmode="numeric" style="margin-bottom:10px;">
       <button class="modal-save" onclick="changePin()">🔑 Update PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORTS MODAL -->
+<div class="modal-overlay" id="reportsModalOverlay">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>📊 Reports</span>
+      <button class="modal-close" onclick="closeReportsModal()">✕</button>
+    </div>
+    <div class="rpt-tabs">
+      <div class="rpt-tab on" id="rptTabMonthly" onclick="switchReportTab('monthly')">📅 Monthly</div>
+      <div class="rpt-tab" id="rptTabFull" onclick="switchReportTab('full')">📜 Full</div>
+      <div class="rpt-tab" id="rptTabRange" onclick="switchReportTab('range')">🗂️ Range</div>
+    </div>
+
+    <!-- Monthly Summary Panel -->
+    <div class="rpt-panel on" id="rptPanelMonthly">
+      <div id="monthlyList"></div>
+      <button class="pdf-btn" onclick="downloadMonthlyPDF()">📄 Download Monthly Summary PDF</button>
+    </div>
+
+    <!-- Full Statement Panel -->
+    <div class="rpt-panel" id="rptPanelFull">
+      <p style="color:var(--tx2);font-size:13px;margin-bottom:14px;">முழு கணக்கு ledger-ஐ (எல்லா entries) PDF-ஆ download பண்ணலாம்.</p>
+      <button class="pdf-btn" onclick="downloadFullPDF()">📄 Download Full Statement PDF</button>
+    </div>
+
+    <!-- Date Range Panel -->
+    <div class="rpt-panel" id="rptPanelRange">
+      <div class="form-grp">
+        <label class="form-lbl">From Date</label>
+        <input type="date" id="rptFrom" class="form-inp">
+      </div>
+      <div class="form-grp">
+        <label class="form-lbl">To Date</label>
+        <input type="date" id="rptTo" class="form-inp">
+      </div>
+      <button class="pdf-btn" onclick="downloadRangePDF()">📄 Download Range PDF</button>
     </div>
   </div>
 </div>
@@ -543,6 +597,207 @@ window.shareRangeStatement = () => {
   if(!msg){ toast('⚠️ Entries இல்லை'); return; }
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
   closeStatementModal();
+};
+
+// ───────── REPORTS MODAL ─────────
+window.openReportsModal = () => {
+  switchReportTab('monthly');
+  renderMonthlyList();
+  $('reportsModalOverlay').classList.add('active');
+};
+window.closeReportsModal = () => {
+  $('reportsModalOverlay').classList.remove('active');
+};
+window.switchReportTab = (tab) => {
+  ['monthly','full','range'].forEach(t => {
+    $('rptTab' + capitalize(t)).classList.toggle('on', t===tab);
+    $('rptPanel' + capitalize(t)).classList.toggle('on', t===tab);
+  });
+};
+function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// Group entries by YYYY-MM and compute monthly totals with running closing balance
+function getMonthlySummaries(){
+  const withBal = calcRunningBalances();
+  const groups = {};
+  withBal.forEach(e => {
+    const ym = e.date.slice(0,7); // YYYY-MM
+    if(!groups[ym]) groups[ym] = { income:0, expense:0, openingBal:null, closingBal:null, count:0 };
+    const g = groups[ym];
+    if(g.openingBal === null) g.openingBal = e.openingBal;
+    g.closingBal = e.closingBal;
+    g.count++;
+    if(e.type === 'income') g.income += Number(e.amount);
+    else g.expense += Number(e.amount);
+  });
+  return Object.keys(groups).sort().map(ym => ({ ym, ...groups[ym] }));
+}
+
+function monthLabel(ym){
+  const [y,m] = ym.split('-');
+  const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return names[parseInt(m)-1] + ' ' + y;
+}
+
+function renderMonthlyList(){
+  const summaries = getMonthlySummaries();
+  const el = $('monthlyList');
+  if(!summaries.length){
+    el.innerHTML = '<div class="empty-state"><div class="ic">📭</div><div>Entries இல்லை</div></div>';
+    return;
+  }
+  el.innerHTML = summaries.slice().reverse().map(s => {
+    return '<div class="month-row">' +
+      '<div class="mname">' + monthLabel(s.ym) + '<div style="font-size:11px;color:var(--tx3);font-weight:400;">' + s.count + ' entries</div></div>' +
+      '<div class="mvals">' +
+        '<span style="color:var(--income)">+' + fmt(s.income) + '</span> / <span style="color:var(--expense)">-' + fmt(s.expense) + '</span>' +
+        '<b>' + fmt(s.closingBal) + '</b>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ───────── PDF GENERATION ─────────
+function pdfHeader(doc){
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(13, 122, 62);
+  doc.text('Sri Veeramathi Amman & Sri Muniyappan Kovil', 105, 15, { align: 'center' });
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Sankagiri, Salem District, Tamil Nadu - 637301', 105, 21, { align: 'center' });
+  doc.setDrawColor(212, 160, 23);
+  doc.setLineWidth(0.5);
+  doc.line(15, 25, 195, 25);
+}
+
+function pdfFooter(doc, pageNum, totalPages){
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text('Generated on ' + new Date().toLocaleDateString('en-IN') + ' · Kovil Main Account', 105, 290, { align: 'center' });
+  doc.text('Page ' + pageNum + ' of ' + totalPages, 195, 290, { align: 'right' });
+}
+
+window.downloadMonthlyPDF = () => {
+  const summaries = getMonthlySummaries();
+  if(!summaries.length){ toast('⚠️ Entries இல்லை'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  pdfHeader(doc);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(20,20,20);
+  doc.text('Monthly Summary Report', 105, 34, { align: 'center' });
+
+  const rows = summaries.map(s => [
+    monthLabel(s.ym),
+    String(s.count),
+    'Rs.' + Math.round(s.income).toLocaleString('en-IN'),
+    'Rs.' + Math.round(s.expense).toLocaleString('en-IN'),
+    'Rs.' + Math.round(s.closingBal).toLocaleString('en-IN')
+  ]);
+
+  doc.autoTable({
+    startY: 40,
+    head: [['Month', 'Entries', 'Income', 'Expense', 'Closing Balance']],
+    body: rows,
+    theme: 'grid',
+    headStyles: { fillColor: [13,122,62], textColor: 255, fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { fontStyle: 'bold' } }
+  });
+
+  const totalIncome = summaries.reduce((s,x)=>s+x.income,0);
+  const totalExpense = summaries.reduce((s,x)=>s+x.expense,0);
+  const finalY = doc.lastAutoTable.finalY + 10;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('Total Income: Rs.' + Math.round(totalIncome).toLocaleString('en-IN'), 15, finalY);
+  doc.text('Total Expense: Rs.' + Math.round(totalExpense).toLocaleString('en-IN'), 15, finalY+6);
+  doc.setTextColor(212,160,23);
+  doc.text('Final Balance: Rs.' + Math.round(summaries[summaries.length-1].closingBal).toLocaleString('en-IN'), 15, finalY+12);
+
+  pdfFooter(doc, 1, 1);
+  doc.save('Kovil_Monthly_Summary_' + new Date().toISOString().split('T')[0] + '.pdf');
+  toast('📄 PDF Downloaded');
+};
+
+function generateLedgerPDF(list, title, filenamePrefix){
+  if(!list.length){ toast('⚠️ Entries இல்லை'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  pdfHeader(doc);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(20,20,20);
+  doc.text(title, 105, 34, { align: 'center' });
+
+  doc.setFontSize(10);
+  doc.setTextColor(80,80,80);
+  doc.text('Opening Balance: Rs.' + Math.round(list[0].openingBal).toLocaleString('en-IN'), 15, 41);
+
+  const rows = list.map((e,i) => [
+    String(i+1),
+    formatDateDMY(e.date),
+    e.type === 'income' ? 'Income' : 'Expense',
+    e.name,
+    e.purpose || '-',
+    (e.type==='income' ? '+' : '-') + 'Rs.' + Math.round(e.amount).toLocaleString('en-IN'),
+    'Rs.' + Math.round(e.closingBal).toLocaleString('en-IN')
+  ]);
+
+  doc.autoTable({
+    startY: 46,
+    head: [['#', 'Date', 'Type', 'Name', 'Purpose', 'Amount', 'Balance']],
+    body: rows,
+    theme: 'grid',
+    headStyles: { fillColor: [13,122,62], textColor: 255, fontStyle: 'bold' },
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    columnStyles: {
+      0: { cellWidth: 8 },
+      2: { cellWidth: 18 },
+      5: { halign: 'right' },
+      6: { halign: 'right', fontStyle: 'bold' }
+    },
+    didParseCell: function(data) {
+      if(data.section === 'body' && data.column.index === 2){
+        data.cell.styles.textColor = data.cell.raw === 'Income' ? [34,197,94] : [239,68,68];
+      }
+      if(data.section === 'body' && data.column.index === 5){
+        data.cell.styles.textColor = String(data.cell.raw).startsWith('+') ? [34,197,94] : [239,68,68];
+      }
+    },
+    didDrawPage: function(data){
+      pdfFooter(doc, doc.internal.getNumberOfPages(), doc.internal.getNumberOfPages());
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 10;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(212,160,23);
+  doc.text('Final Balance: Rs.' + Math.round(list[list.length-1].closingBal).toLocaleString('en-IN'), 15, finalY);
+
+  doc.save(filenamePrefix + '_' + new Date().toISOString().split('T')[0] + '.pdf');
+  toast('📄 PDF Downloaded');
+}
+
+window.downloadFullPDF = () => {
+  const withBal = calcRunningBalances();
+  generateLedgerPDF(withBal, 'Full Account Statement', 'Kovil_Full_Statement');
+};
+
+window.downloadRangePDF = () => {
+  const from = $('rptFrom').value;
+  const to = $('rptTo').value;
+  const withBal = calcRunningBalances();
+  let list = withBal;
+  if(from) list = list.filter(e => e.date >= from);
+  if(to) list = list.filter(e => e.date <= to);
+  const rangeLabel = (from ? formatDateDMY(from) : 'Start') + ' to ' + (to ? formatDateDMY(to) : 'End');
+  generateLedgerPDF(list, 'Statement: ' + rangeLabel, 'Kovil_Range_Statement');
 };
 
 // ───────── INIT ─────────

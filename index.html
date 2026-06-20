@@ -110,8 +110,16 @@ input,select,textarea,button{font-family:inherit;}
 .opening-bal-box .lbl{font-size:12px;color:var(--tx2);}
 .opening-bal-box .val{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:var(--gold);margin-top:4px;}
 
-.rpt-tabs{display:flex;gap:6px;margin-bottom:16px;}
-.rpt-tab{flex:1;padding:10px 4px;text-align:center;border-radius:10px;border:1px solid var(--bdr);background:var(--sur2);color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;}
+.search-row{margin-bottom:10px;}
+.search-inp{width:100%;padding:11px 14px;border-radius:11px;border:1px solid var(--bdr);background:var(--sur2);color:var(--txt);font-size:14px;}
+.search-inp::placeholder{color:var(--tx3);}
+.filter-row{display:flex;gap:6px;margin-bottom:14px;}
+.filter-btn{flex:1;text-align:center;padding:8px 4px;border-radius:9px;border:1px solid var(--bdr);background:var(--sur2);color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;}
+.filter-btn.on{background:rgba(13,122,62,.25);border-color:var(--green2);color:var(--income);}
+.cat-badge{display:inline-block;font-size:11px;background:var(--sur2);color:var(--tx2);padding:2px 8px;border-radius:6px;border:1px solid var(--bdr);}
+
+.rpt-tabs{display:flex;gap:4px;margin-bottom:16px;}
+.rpt-tab{flex:1;padding:9px 2px;text-align:center;border-radius:9px;border:1px solid var(--bdr);background:var(--sur2);color:var(--tx2);font-size:10.5px;font-weight:600;cursor:pointer;}
 .rpt-tab.on{background:rgba(13,122,62,.2);border-color:var(--green2);color:var(--income);}
 .rpt-panel{display:none;}
 .rpt-panel.on{display:block;}
@@ -143,11 +151,11 @@ input,select,textarea,button{font-family:inherit;}
       <div style="font-size:32px;">🛕</div>
       <div class="tb-titles">
         <div class="tb-title">ஸ்ரீ வீரமாதி அம்மன் & ஸ்ரீ முனியப்பன் கோவில்</div>
-        <div class="tb-sub">Kovil Main Account · சங்ககிரி</div>
+        <div class="tb-sub">Kovil Main Account · சங்ககிரி <span id="viewOnlyBadge" style="display:none;background:rgba(251,191,36,.2);color:#fbbf24;font-size:10px;padding:2px 7px;border-radius:6px;margin-left:6px;font-weight:700;">👀 VIEW ONLY</span></div>
       </div>
     </div>
     <div class="tb-actions">
-      <div class="ib" onclick="openSettings()">⚙️</div>
+      <div class="ib" id="settingsBtn" onclick="openSettings()">⚙️</div>
       <div class="ib" onclick="doLogout()">🔒</div>
     </div>
   </div>
@@ -172,10 +180,18 @@ input,select,textarea,button{font-family:inherit;}
       <div class="lbl">📂 Opening Balance (From)</div>
       <div class="val" id="openingBalDisplay">₹0</div>
     </div>
+    <div class="search-row">
+      <input type="text" class="search-inp" id="searchInp" placeholder="🔍 Search name, purpose, note..." oninput="onSearchInput(this.value)">
+    </div>
+    <div class="filter-row">
+      <div class="filter-btn on" id="filterBtnAll" onclick="setTypeFilter('all')">All</div>
+      <div class="filter-btn" id="filterBtnIncome" onclick="setTypeFilter('income')">➕ Income</div>
+      <div class="filter-btn" id="filterBtnExpense" onclick="setTypeFilter('expense')">➖ Expense</div>
+    </div>
     <div id="entryList"></div>
   </div>
 
-  <button class="fab" onclick="openEntryModal()">+</button>
+  <button class="fab" id="fabBtn" onclick="openEntryModal()">+</button>
 
   <div class="bottom-bar">
     <button class="bb-btn" onclick="openReportsModal()">📊 Reports</button>
@@ -208,6 +224,19 @@ input,select,textarea,button{font-family:inherit;}
       <input type="number" id="inpAmount" class="form-inp" placeholder="0">
     </div>
     <div class="form-grp">
+      <label class="form-lbl">🏷️ Category</label>
+      <select id="inpCategory" class="form-inp">
+        <option value="chit">💰 Chit Income</option>
+        <option value="donation">🙏 Donation</option>
+        <option value="construction">🏗️ Construction</option>
+        <option value="maintenance">🔧 Maintenance</option>
+        <option value="eb">💡 EB / Electricity</option>
+        <option value="festival">🎉 Festival / Pooja</option>
+        <option value="salary">👷 Salary / Wages</option>
+        <option value="other">📌 Other</option>
+      </select>
+    </div>
+    <div class="form-grp">
       <label class="form-lbl">📝 Purpose</label>
       <input type="text" id="inpPurpose" class="form-inp" placeholder="e.g. Chit – Month 1">
     </div>
@@ -231,10 +260,24 @@ input,select,textarea,button{font-family:inherit;}
       <input type="number" id="inpOpeningBal" class="form-inp" placeholder="0">
     </div>
     <button class="modal-save" onclick="saveOpeningBalance()">💾 Save</button>
+
     <div style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:16px;">
-      <label class="form-lbl">🔑 Change PIN</label>
-      <input type="password" id="newPin" class="form-inp" placeholder="New PIN" maxlength="6" inputmode="numeric" style="margin-bottom:10px;">
-      <button class="modal-save" onclick="changePin()">🔑 Update PIN</button>
+      <label class="form-lbl">🔑 Change Edit PIN (full access)</label>
+      <input type="password" id="newPin" class="form-inp" placeholder="New Edit PIN" maxlength="6" inputmode="numeric" style="margin-bottom:10px;">
+      <button class="modal-save" onclick="changePin()">🔑 Update Edit PIN</button>
+    </div>
+
+    <div style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:16px;">
+      <label class="form-lbl">👀 View-Only PIN (family members - read only)</label>
+      <input type="password" id="newViewPin" class="form-inp" placeholder="View-only PIN" maxlength="6" inputmode="numeric" style="margin-bottom:10px;">
+      <button class="modal-save" onclick="changeViewPin()">👀 Update View PIN</button>
+      <div style="font-size:11px;color:var(--tx3);margin-top:8px;">இந்த PIN-ஐ family members-க்கு கொடுக்கலாம் — entries பார்க்க மட்டும், edit/delete செய்ய முடியாது.</div>
+    </div>
+
+    <div style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:16px;">
+      <label class="form-lbl">💾 Backup</label>
+      <button class="modal-save" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);" onclick="exportBackup()">⬇️ Export All Data (JSON)</button>
+      <div style="font-size:11px;color:var(--tx3);margin-top:8px;">முழு entries + settings-ஐ ஒரு JSON file-ஆ download பண்ணி safe-ஆ வைக்கலாம்.</div>
     </div>
   </div>
 </div>
@@ -248,6 +291,7 @@ input,select,textarea,button{font-family:inherit;}
     </div>
     <div class="rpt-tabs">
       <div class="rpt-tab on" id="rptTabMonthly" onclick="switchReportTab('monthly')">📅 Monthly</div>
+      <div class="rpt-tab" id="rptTabCategory" onclick="switchReportTab('category')">🏷️ Category</div>
       <div class="rpt-tab" id="rptTabFull" onclick="switchReportTab('full')">📜 Full</div>
       <div class="rpt-tab" id="rptTabRange" onclick="switchReportTab('range')">🗂️ Range</div>
     </div>
@@ -256,6 +300,12 @@ input,select,textarea,button{font-family:inherit;}
     <div class="rpt-panel on" id="rptPanelMonthly">
       <div id="monthlyList"></div>
       <button class="pdf-btn" onclick="downloadMonthlyPDF()">📄 Download Monthly Summary PDF</button>
+    </div>
+
+    <!-- Category Breakdown Panel -->
+    <div class="rpt-panel" id="rptPanelCategory">
+      <div id="categoryList"></div>
+      <button class="pdf-btn" onclick="downloadCategoryPDF()">📄 Download Category Report PDF</button>
     </div>
 
     <!-- Full Statement Panel -->
@@ -315,9 +365,24 @@ const db = firebase.database();
 const ROOT = 'kovilMainAccount';
 
 let entries = [];
-let settings = { openingBalance: 0, pin: '1973' };
+let settings = { openingBalance: 0, pin: '1973', viewPin: '' };
 let editingId = null;
 let currentType = 'income';
+let searchQuery = '';
+let typeFilter = 'all'; // all | income | expense
+let isViewOnly = false;
+
+const CATEGORIES = {
+  chit: { emoji: '💰', label: 'Chit Income' },
+  donation: { emoji: '🙏', label: 'Donation' },
+  construction: { emoji: '🏗️', label: 'Construction' },
+  maintenance: { emoji: '🔧', label: 'Maintenance' },
+  eb: { emoji: '💡', label: 'EB / Electricity' },
+  festival: { emoji: '🎉', label: 'Festival / Pooja' },
+  salary: { emoji: '👷', label: 'Salary / Wages' },
+  other: { emoji: '📌', label: 'Other' }
+};
+function catInfo(key){ return CATEGORIES[key] || CATEGORIES.other; }
 
 function $(id){ return document.getElementById(id); }
 
@@ -332,18 +397,36 @@ function toast(msg){
 function doLogin(){
   const pin = $('loginPin').value.trim();
   if(pin === settings.pin){
-    $('loginScreen').classList.remove('active');
-    $('mainApp').classList.add('active');
-    localStorage.setItem('kma_logged', '1');
-    $('loginErr').textContent = '';
+    isViewOnly = false;
+    enterApp('full');
+  } else if(settings.viewPin && pin === settings.viewPin){
+    isViewOnly = true;
+    enterApp('view');
   } else {
     $('loginErr').textContent = 'தவறான PIN';
   }
 }
 window.doLogin = doLogin;
 
+function enterApp(mode){
+  $('loginScreen').classList.remove('active');
+  $('mainApp').classList.add('active');
+  localStorage.setItem('kma_logged', mode);
+  $('loginErr').textContent = '';
+  applyViewOnlyUI();
+}
+
+function applyViewOnlyUI(){
+  $('fabBtn').style.display = isViewOnly ? 'none' : 'flex';
+  $('settingsBtn').style.display = isViewOnly ? 'none' : 'flex';
+  const viewBadge = document.getElementById('viewOnlyBadge');
+  if(viewBadge) viewBadge.style.display = isViewOnly ? 'inline-block' : 'none';
+  renderEntries();
+}
+
 window.doLogout = () => {
   localStorage.removeItem('kma_logged');
+  isViewOnly = false;
   $('mainApp').classList.remove('active');
   $('loginScreen').classList.add('active');
   $('loginPin').value = '';
@@ -400,19 +483,44 @@ function calcRunningBalances(){
 function renderEntries(){
   const withBal = calcRunningBalances();
   const el = $('entryList');
-  if(!withBal.length){
-    el.innerHTML = '<div class="empty-state"><div class="ic">📭</div><div>இன்னும் entries இல்லை</div><div style="font-size:12px;margin-top:6px;">+ பட்டனை தட்டி சேர்க்கவும்</div></div>';
+
+  // Apply search + type filter (search/filter on full list with correct running balances, then display matches)
+  let filtered = withBal;
+  if(typeFilter !== 'all'){
+    filtered = filtered.filter(e => e.type === typeFilter);
+  }
+  if(searchQuery.trim()){
+    const q = searchQuery.trim().toLowerCase();
+    filtered = filtered.filter(e =>
+      (e.name||'').toLowerCase().includes(q) ||
+      (e.purpose||'').toLowerCase().includes(q) ||
+      (e.note||'').toLowerCase().includes(q) ||
+      catInfo(e.category).label.toLowerCase().includes(q)
+    );
+  }
+
+  if(!filtered.length){
+    el.innerHTML = withBal.length
+      ? '<div class="empty-state"><div class="ic">🔍</div><div>பொருந்தும் entries இல்லை</div></div>'
+      : '<div class="empty-state"><div class="ic">📭</div><div>இன்னும் entries இல்லை</div><div style="font-size:12px;margin-top:6px;">+ பட்டனை தட்டி சேர்க்கவும்</div></div>';
     return;
   }
-  el.innerHTML = withBal.slice().reverse().map(e => {
+
+  el.innerHTML = filtered.slice().reverse().map(e => {
     const isIncome = e.type === 'income';
     const dateStr = formatDateDMY(e.date);
+    const cat = catInfo(e.category);
+    const actionsHtml = isViewOnly ? '' :
+      '<div class="entry-actions">' +
+        '<button onclick="editEntry(\'' + e.id + '\')">✏️ Edit</button>' +
+        '<button class="del-btn" onclick="deleteEntry(\'' + e.id + '\')">🗑️ Delete</button>' +
+      '</div>';
     return '<div class="entry-card ' + (isIncome?'':'expense') + '">' +
       '<div class="entry-head">' +
         '<span class="entry-type ' + (isIncome?'':'expense') + '">' + (isIncome?'➕ INCOME':'➖ EXPENSE') + '</span>' +
         '<span class="entry-amt ' + (isIncome?'income':'expense') + '">' + (isIncome?'+':'-') + fmt(e.amount) + '</span>' +
       '</div>' +
-      '<div class="entry-row">📅 <b>' + dateStr + '</b></div>' +
+      '<div class="entry-row">📅 <b>' + dateStr + '</b> &nbsp; <span class="cat-badge">' + cat.emoji + ' ' + cat.label + '</span></div>' +
       '<div class="entry-row">' + (isIncome?'👤 From':'👤 Paid To') + ': <b>' + esc(e.name) + '</b></div>' +
       '<div class="entry-row">📝 ' + esc(e.purpose||'') + '</div>' +
       (e.note ? '<div class="entry-note">🗒️ ' + esc(e.note) + '</div>' : '') +
@@ -420,13 +528,22 @@ function renderEntries(){
         '<span>' + fmt(e.openingBal) + ' ' + (isIncome?'+':'−') + ' ' + fmt(e.amount) + '</span>' +
         '<b>= ' + fmt(e.closingBal) + '</b>' +
       '</div>' +
-      '<div class="entry-actions">' +
-        '<button onclick="editEntry(\'' + e.id + '\')">✏️ Edit</button>' +
-        '<button class="del-btn" onclick="deleteEntry(\'' + e.id + '\')">🗑️ Delete</button>' +
-      '</div>' +
+      actionsHtml +
     '</div>';
   }).join('');
 }
+
+window.onSearchInput = (val) => {
+  searchQuery = val;
+  renderEntries();
+};
+window.setTypeFilter = (type) => {
+  typeFilter = type;
+  ['all','income','expense'].forEach(t => {
+    $('filterBtn' + capitalize(t)).classList.toggle('on', t===type);
+  });
+  renderEntries();
+};
 
 function updateStats(){
   const totalIncome = entries.filter(e=>e.type==='income').reduce((s,e)=>s+Number(e.amount),0);
@@ -448,6 +565,7 @@ function esc(s){
 
 // ───────── ENTRY MODAL ─────────
 window.openEntryModal = (id) => {
+  if(isViewOnly){ toast('👀 View-only mode - editing disabled'); return; }
   editingId = id || null;
   if(id){
     const e = entries.find(x=>x.id===id);
@@ -457,6 +575,7 @@ window.openEntryModal = (id) => {
     $('inpDate').value = e.date;
     $('inpName').value = e.name;
     $('inpAmount').value = e.amount;
+    $('inpCategory').value = e.category || 'other';
     $('inpPurpose').value = e.purpose||'';
     $('inpNote').value = e.note||'';
   } else {
@@ -465,6 +584,7 @@ window.openEntryModal = (id) => {
     $('inpDate').value = new Date().toISOString().split('T')[0];
     $('inpName').value = '';
     $('inpAmount').value = '';
+    $('inpCategory').value = 'chit';
     $('inpPurpose').value = '';
     $('inpNote').value = '';
   }
@@ -481,12 +601,16 @@ window.setEntryType = (type) => {
   $('typeIncomeBtn').classList.toggle('on', type==='income');
   $('typeExpenseBtn').classList.toggle('on', type==='expense');
   $('inpNameLbl').textContent = type==='income' ? '👤 From' : '👤 Paid To';
+  // Default category suggestion based on type
+  if(type === 'income' && !editingId) $('inpCategory').value = 'chit';
+  if(type === 'expense' && !editingId) $('inpCategory').value = 'maintenance';
 };
 
 window.saveEntry = () => {
   const date = $('inpDate').value;
   const name = $('inpName').value.trim();
   const amount = parseFloat($('inpAmount').value);
+  const category = $('inpCategory').value;
   const purpose = $('inpPurpose').value.trim();
   const note = $('inpNote').value.trim();
 
@@ -496,7 +620,7 @@ window.saveEntry = () => {
   }
 
   const existing = editingId ? entries.find(x=>x.id===editingId) : null;
-  const payload = { type: currentType, date, name, amount, purpose, note, createdAt: existing ? (existing.createdAt || Date.now()) : Date.now() };
+  const payload = { type: currentType, date, name, amount, category, purpose, note, createdAt: existing ? (existing.createdAt || Date.now()) : Date.now() };
 
   if(editingId){
     db.ref(ROOT + '/entries/' + editingId).set(payload)
@@ -512,6 +636,7 @@ window.saveEntry = () => {
 };
 
 window.deleteEntry = (id) => {
+  if(isViewOnly){ toast('👀 View-only mode - delete disabled'); return; }
   if(!confirm('இந்த entry-ஐ delete பண்ணலாமா?')) return;
   db.ref(ROOT + '/entries/' + id).remove();
   toast('🗑️ Deleted');
@@ -521,6 +646,7 @@ window.deleteEntry = (id) => {
 window.openSettings = () => {
   $('inpOpeningBal').value = settings.openingBalance || 0;
   $('newPin').value = '';
+  $('newViewPin').value = '';
   $('settingsModalOverlay').classList.add('active');
 };
 window.closeSettings = () => {
@@ -536,8 +662,34 @@ window.changePin = () => {
   const pin = $('newPin').value.trim();
   if(!pin || pin.length<4){ toast('⚠️ Min 4 digit PIN'); return; }
   db.ref(ROOT + '/settings/pin').set(pin);
-  toast('✅ PIN Updated');
+  toast('✅ Edit PIN Updated');
   closeSettings();
+};
+window.changeViewPin = () => {
+  const pin = $('newViewPin').value.trim();
+  if(!pin || pin.length<4){ toast('⚠️ Min 4 digit PIN'); return; }
+  if(pin === settings.pin){ toast('⚠️ Edit PIN-ஓட வேற PIN கொடுங்கள்'); return; }
+  db.ref(ROOT + '/settings/viewPin').set(pin);
+  toast('✅ View PIN Updated');
+  closeSettings();
+};
+window.exportBackup = () => {
+  const data = {
+    exportedAt: new Date().toISOString(),
+    settings: { openingBalance: settings.openingBalance || 0 },
+    entries: entries.map(e => ({ ...e }))
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Kovil_Main_Account_Backup_' + new Date().toISOString().split('T')[0] + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('⬇️ Backup Downloaded');
 };
 
 // ───────── STATEMENT GENERATION ─────────
@@ -609,10 +761,11 @@ window.closeReportsModal = () => {
   $('reportsModalOverlay').classList.remove('active');
 };
 window.switchReportTab = (tab) => {
-  ['monthly','full','range'].forEach(t => {
+  ['monthly','category','full','range'].forEach(t => {
     $('rptTab' + capitalize(t)).classList.toggle('on', t===tab);
     $('rptPanel' + capitalize(t)).classList.toggle('on', t===tab);
   });
+  if(tab === 'category') renderCategoryList();
 };
 function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
 
@@ -652,6 +805,42 @@ function renderMonthlyList(){
       '<div class="mvals">' +
         '<span style="color:var(--income)">+' + fmt(s.income) + '</span> / <span style="color:var(--expense)">-' + fmt(s.expense) + '</span>' +
         '<b>' + fmt(s.closingBal) + '</b>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// Group entries by category, separately for income and expense
+function getCategorySummaries(){
+  const groups = {};
+  entries.forEach(e => {
+    const key = e.category || 'other';
+    if(!groups[key]) groups[key] = { income:0, expense:0, count:0 };
+    groups[key].count++;
+    if(e.type === 'income') groups[key].income += Number(e.amount);
+    else groups[key].expense += Number(e.amount);
+  });
+  return Object.keys(groups)
+    .map(key => ({ key, ...catInfo(key), ...groups[key] }))
+    .sort((a,b) => (b.income+b.expense) - (a.income+a.expense));
+}
+
+function renderCategoryList(){
+  const summaries = getCategorySummaries();
+  const el = $('categoryList');
+  if(!summaries.length){
+    el.innerHTML = '<div class="empty-state"><div class="ic">📭</div><div>Entries இல்லை</div></div>';
+    return;
+  }
+  el.innerHTML = summaries.map(s => {
+    const net = s.income - s.expense;
+    return '<div class="month-row">' +
+      '<div class="mname">' + s.emoji + ' ' + s.label + '<div style="font-size:11px;color:var(--tx3);font-weight:400;">' + s.count + ' entries</div></div>' +
+      '<div class="mvals">' +
+        (s.income ? '<span style="color:var(--income)">+' + fmt(s.income) + '</span>' : '') +
+        (s.income && s.expense ? ' / ' : '') +
+        (s.expense ? '<span style="color:var(--expense)">-' + fmt(s.expense) + '</span>' : '') +
+        '<b>Net: ' + fmt(net) + '</b>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -723,6 +912,51 @@ window.downloadMonthlyPDF = () => {
   toast('📄 PDF Downloaded');
 };
 
+window.downloadCategoryPDF = () => {
+  const summaries = getCategorySummaries();
+  if(!summaries.length){ toast('⚠️ Entries இல்லை'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  pdfHeader(doc);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(20,20,20);
+  doc.text('Category-wise Report', 105, 34, { align: 'center' });
+
+  const rows = summaries.map(s => [
+    s.emoji + ' ' + s.label,
+    String(s.count),
+    'Rs.' + Math.round(s.income).toLocaleString('en-IN'),
+    'Rs.' + Math.round(s.expense).toLocaleString('en-IN'),
+    'Rs.' + Math.round(s.income - s.expense).toLocaleString('en-IN')
+  ]);
+
+  doc.autoTable({
+    startY: 40,
+    head: [['Category', 'Entries', 'Income', 'Expense', 'Net']],
+    body: rows,
+    theme: 'grid',
+    headStyles: { fillColor: [13,122,62], textColor: 255, fontStyle: 'bold' },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { fontStyle: 'bold' } }
+  });
+
+  const totalIncome = summaries.reduce((s,x)=>s+x.income,0);
+  const totalExpense = summaries.reduce((s,x)=>s+x.expense,0);
+  const finalY = doc.lastAutoTable.finalY + 10;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('Total Income: Rs.' + Math.round(totalIncome).toLocaleString('en-IN'), 15, finalY);
+  doc.text('Total Expense: Rs.' + Math.round(totalExpense).toLocaleString('en-IN'), 15, finalY+6);
+  doc.setTextColor(212,160,23);
+  doc.text('Net: Rs.' + Math.round(totalIncome - totalExpense).toLocaleString('en-IN'), 15, finalY+12);
+
+  pdfFooter(doc, 1, 1);
+  doc.save('Kovil_Category_Report_' + new Date().toISOString().split('T')[0] + '.pdf');
+  toast('📄 PDF Downloaded');
+};
+
 function generateLedgerPDF(list, title, filenamePrefix){
   if(!list.length){ toast('⚠️ Entries இல்லை'); return; }
   const { jsPDF } = window.jspdf;
@@ -742,6 +976,7 @@ function generateLedgerPDF(list, title, filenamePrefix){
     String(i+1),
     formatDateDMY(e.date),
     e.type === 'income' ? 'Income' : 'Expense',
+    catInfo(e.category).label,
     e.name,
     e.purpose || '-',
     (e.type==='income' ? '+' : '-') + 'Rs.' + Math.round(e.amount).toLocaleString('en-IN'),
@@ -750,22 +985,23 @@ function generateLedgerPDF(list, title, filenamePrefix){
 
   doc.autoTable({
     startY: 46,
-    head: [['#', 'Date', 'Type', 'Name', 'Purpose', 'Amount', 'Balance']],
+    head: [['#', 'Date', 'Type', 'Category', 'Name', 'Purpose', 'Amount', 'Balance']],
     body: rows,
     theme: 'grid',
-    headStyles: { fillColor: [13,122,62], textColor: 255, fontStyle: 'bold' },
-    styles: { fontSize: 8, cellPadding: 2.5 },
+    headStyles: { fillColor: [13,122,62], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    styles: { fontSize: 7.5, cellPadding: 2.2 },
     columnStyles: {
-      0: { cellWidth: 8 },
-      2: { cellWidth: 18 },
-      5: { halign: 'right' },
-      6: { halign: 'right', fontStyle: 'bold' }
+      0: { cellWidth: 7 },
+      2: { cellWidth: 15 },
+      3: { cellWidth: 20 },
+      6: { halign: 'right' },
+      7: { halign: 'right', fontStyle: 'bold' }
     },
     didParseCell: function(data) {
       if(data.section === 'body' && data.column.index === 2){
         data.cell.styles.textColor = data.cell.raw === 'Income' ? [34,197,94] : [239,68,68];
       }
-      if(data.section === 'body' && data.column.index === 5){
+      if(data.section === 'body' && data.column.index === 6){
         data.cell.styles.textColor = String(data.cell.raw).startsWith('+') ? [34,197,94] : [239,68,68];
       }
     },
@@ -803,10 +1039,13 @@ window.downloadRangePDF = () => {
 // ───────── INIT ─────────
 (function init(){
   initFirebase();
-  if(localStorage.getItem('kma_logged') === '1'){
+  const savedMode = localStorage.getItem('kma_logged');
+  if(savedMode === 'full' || savedMode === 'view' || savedMode === '1'){
+    isViewOnly = (savedMode === 'view');
     setTimeout(function(){
       $('loginScreen').classList.remove('active');
       $('mainApp').classList.add('active');
+      applyViewOnlyUI();
     }, 300);
   }
   $('loginPin').addEventListener('keypress', function(e){ if(e.key==='Enter') doLogin(); });

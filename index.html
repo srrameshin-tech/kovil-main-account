@@ -124,6 +124,13 @@ input,select,textarea,button{font-family:inherit;}
 .rpt-panel{display:none;}
 .rpt-panel.on{display:block;}
 .month-row{display:flex;justify-content:space-between;align-items:center;background:var(--sur2);border:1px solid var(--bdr);border-radius:11px;padding:12px 14px;margin-bottom:8px;}
+.cat-mgr-row{display:flex;align-items:center;gap:8px;background:var(--sur2);border:1px solid var(--bdr);border-radius:11px;padding:10px 12px;margin-bottom:8px;}
+.cat-mgr-row.disabled{opacity:0.5;}
+.cat-mgr-row .cmr-emoji{font-size:18px;flex-shrink:0;width:26px;text-align:center;}
+.cat-mgr-row .cmr-label{flex:1;font-size:14px;font-weight:600;}
+.cat-mgr-row .cmr-tag{font-size:10px;color:var(--tx3);font-weight:400;margin-top:2px;}
+.cmr-btn{background:var(--sur);border:1px solid var(--bdr);width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;}
+.cmr-btn.danger{color:var(--red);}
 .month-row .mname{font-weight:700;font-size:14px;}
 .month-row .mvals{text-align:right;font-size:12px;color:var(--tx2);}
 .month-row .mvals b{color:var(--gold);font-family:'Space Grotesk',sans-serif;font-size:14px;display:block;}
@@ -224,17 +231,8 @@ input,select,textarea,button{font-family:inherit;}
       <input type="number" id="inpAmount" class="form-inp" placeholder="0">
     </div>
     <div class="form-grp">
-      <label class="form-lbl">🏷️ Category</label>
-      <select id="inpCategory" class="form-inp">
-        <option value="chit">💰 Chit Income</option>
-        <option value="donation">🙏 Donation</option>
-        <option value="construction">🏗️ Construction</option>
-        <option value="maintenance">🔧 Maintenance</option>
-        <option value="eb">💡 EB / Electricity</option>
-        <option value="festival">🎉 Festival / Pooja</option>
-        <option value="salary">👷 Salary / Wages</option>
-        <option value="other">📌 Other</option>
-      </select>
+      <label class="form-lbl">🏷️ Category &nbsp; <a href="#" onclick="event.preventDefault();openCategoryManager();" style="color:var(--income);font-size:11px;font-weight:600;">⚙️ Manage</a></label>
+      <select id="inpCategory" class="form-inp"></select>
     </div>
     <div class="form-grp">
       <label class="form-lbl">📝 Purpose</label>
@@ -275,9 +273,42 @@ input,select,textarea,button{font-family:inherit;}
     </div>
 
     <div style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:16px;">
+      <label class="form-lbl">🏷️ Categories</label>
+      <button class="modal-save" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);" onclick="closeSettings();openCategoryManager();">🏷️ Manage Categories</button>
+    </div>
+
+    <div style="margin-top:20px;border-top:1px solid var(--bdr);padding-top:16px;">
       <label class="form-lbl">💾 Backup</label>
       <button class="modal-save" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);" onclick="exportBackup()">⬇️ Export All Data (JSON)</button>
       <div style="font-size:11px;color:var(--tx3);margin-top:8px;">முழு entries + settings-ஐ ஒரு JSON file-ஆ download பண்ணி safe-ஆ வைக்கலாம்.</div>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORY MANAGER MODAL -->
+<div class="modal-overlay" id="categoryManagerOverlay">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>🏷️ Manage Categories</span>
+      <button class="modal-close" onclick="closeCategoryManager()">✕</button>
+    </div>
+    <div class="type-toggle">
+      <div class="type-btn income on" id="catMgrIncomeBtn" onclick="switchCategoryManagerTab('income')">➕ Income</div>
+      <div class="type-btn expense" id="catMgrExpenseBtn" onclick="switchCategoryManagerTab('expense')">➖ Expense</div>
+    </div>
+
+    <div id="categoryManagerList" style="margin-bottom:16px;"></div>
+
+    <div style="border-top:1px solid var(--bdr);padding-top:14px;">
+      <div class="form-lbl" id="catFormTitle">➕ New Category</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="text" id="catEmoji" class="form-inp" placeholder="🏷️" style="width:70px;text-align:center;flex-shrink:0;" maxlength="4">
+        <input type="text" id="catLabel" class="form-inp" placeholder="Category name" style="flex:1;">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="modal-save" id="catSaveBtn" onclick="saveCategoryForm()" style="margin-top:0;">💾 Save Category</button>
+        <button class="modal-save" id="catCancelEditBtn" onclick="resetCategoryForm()" style="margin-top:0;background:var(--sur2);border:1px solid var(--bdr);display:none;flex:0 0 auto;width:auto;padding:13px 18px;">✕</button>
+      </div>
     </div>
   </div>
 </div>
@@ -371,18 +402,42 @@ let currentType = 'income';
 let searchQuery = '';
 let typeFilter = 'all'; // all | income | expense
 let isViewOnly = false;
+let categoryManagerType = 'income'; // which tab is active in category manager
+let editingCategoryId = null;
 
-const CATEGORIES = {
-  chit: { emoji: '💰', label: 'Chit Income' },
-  donation: { emoji: '🙏', label: 'Donation' },
-  construction: { emoji: '🏗️', label: 'Construction' },
-  maintenance: { emoji: '🔧', label: 'Maintenance' },
-  eb: { emoji: '💡', label: 'EB / Electricity' },
-  festival: { emoji: '🎉', label: 'Festival / Pooja' },
-  salary: { emoji: '👷', label: 'Salary / Wages' },
-  other: { emoji: '📌', label: 'Other' }
+// categories.income / categories.expense are objects: { catId: { emoji, label, disabled } }
+let categories = { income: {}, expense: {} };
+
+const DEFAULT_CATEGORIES = {
+  income: {
+    chit:     { emoji: '💰', label: 'Chit Income' },
+    donation: { emoji: '🙏', label: 'Donation' },
+    other_in: { emoji: '📌', label: 'Other' }
+  },
+  expense: {
+    construction: { emoji: '🏗️', label: 'Construction' },
+    maintenance:  { emoji: '🔧', label: 'Maintenance' },
+    eb:           { emoji: '💡', label: 'EB / Electricity' },
+    festival:     { emoji: '🎉', label: 'Festival / Pooja' },
+    salary:       { emoji: '👷', label: 'Salary / Wages' },
+    other_ex:     { emoji: '📌', label: 'Other' }
+  }
 };
-function catInfo(key){ return CATEGORIES[key] || CATEGORIES.other; }
+
+// Look up category info by id, searching both income/expense lists (for display on existing entries)
+function catInfo(catId){
+  if(!catId) return { emoji: '📌', label: 'Other', disabled: false };
+  const fromIncome = categories.income[catId];
+  const fromExpense = categories.expense[catId];
+  return fromIncome || fromExpense || { emoji: '📌', label: 'Other', disabled: false };
+}
+// Get active (non-disabled) categories for a given type, for use in dropdowns
+function activeCategories(type){
+  const list = categories[type] || {};
+  return Object.keys(list)
+    .filter(id => !list[id].disabled)
+    .map(id => ({ id, ...list[id] }));
+}
 
 function $(id){ return document.getElementById(id); }
 
@@ -462,6 +517,28 @@ function initFirebase(){
   }, err => {
     console.error('Entries listener error:', err);
     toast('❌ Entries load error: ' + err.message);
+  });
+
+  db.ref(`${ROOT}/categories`).on('value', snap => {
+    if(snap.exists()){
+      const data = snap.val();
+      categories = {
+        income: data.income || {},
+        expense: data.expense || {}
+      };
+    } else {
+      // First run - seed default categories
+      db.ref(`${ROOT}/categories`).set(DEFAULT_CATEGORIES);
+      categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+    }
+    populateCategoryDropdown();
+    renderEntries(); // refresh badges in case categories changed
+    if($('categoryManagerOverlay').classList.contains('active')){
+      renderCategoryManagerList();
+    }
+  }, err => {
+    console.error('Categories listener error:', err);
+    toast('❌ Categories load error: ' + err.message);
   });
 }
 
@@ -571,20 +648,21 @@ window.openEntryModal = (id) => {
     const e = entries.find(x=>x.id===id);
     if(!e) return;
     $('entryModalTitle').textContent = '✏️ Edit Entry';
-    setEntryType(e.type);
+    setEntryType(e.type, true);
     $('inpDate').value = e.date;
     $('inpName').value = e.name;
     $('inpAmount').value = e.amount;
-    $('inpCategory').value = e.category || 'other';
+    // If the entry's category was deleted/disabled, still show it via populateCategoryDropdown's "keepSelected"
+    populateCategoryDropdown(e.category);
+    $('inpCategory').value = e.category || '';
     $('inpPurpose').value = e.purpose||'';
     $('inpNote').value = e.note||'';
   } else {
     $('entryModalTitle').textContent = '➕ New Entry';
-    setEntryType('income');
+    setEntryType('income', true);
     $('inpDate').value = new Date().toISOString().split('T')[0];
     $('inpName').value = '';
     $('inpAmount').value = '';
-    $('inpCategory').value = 'chit';
     $('inpPurpose').value = '';
     $('inpNote').value = '';
   }
@@ -596,15 +674,27 @@ window.closeEntryModal = () => {
 };
 window.editEntry = (id) => openEntryModal(id);
 
-window.setEntryType = (type) => {
+window.setEntryType = (type, skipPopulate) => {
   currentType = type;
   $('typeIncomeBtn').classList.toggle('on', type==='income');
   $('typeExpenseBtn').classList.toggle('on', type==='expense');
   $('inpNameLbl').textContent = type==='income' ? '👤 From' : '👤 Paid To';
-  // Default category suggestion based on type
-  if(type === 'income' && !editingId) $('inpCategory').value = 'chit';
-  if(type === 'expense' && !editingId) $('inpCategory').value = 'maintenance';
+  if(!skipPopulate) populateCategoryDropdown();
 };
+
+// Fill the category <select> with active categories for currentType.
+// If keepSelected is given (an existing entry's category id), include it even if disabled/missing, so edits don't silently change category.
+function populateCategoryDropdown(keepSelected){
+  const sel = $('inpCategory');
+  if(!sel) return;
+  const list = activeCategories(currentType);
+  let html = list.map(c => '<option value="' + c.id + '">' + c.emoji + ' ' + c.label + '</option>').join('');
+  if(keepSelected && !list.find(c => c.id === keepSelected)){
+    const info = catInfo(keepSelected);
+    html += '<option value="' + keepSelected + '">' + info.emoji + ' ' + info.label + ' (inactive)</option>';
+  }
+  sel.innerHTML = html || '<option value="">No categories - add one in Manage</option>';
+}
 
 window.saveEntry = () => {
   const date = $('inpDate').value;
@@ -677,6 +767,7 @@ window.exportBackup = () => {
   const data = {
     exportedAt: new Date().toISOString(),
     settings: { openingBalance: settings.openingBalance || 0 },
+    categories: categories,
     entries: entries.map(e => ({ ...e }))
   };
   const json = JSON.stringify(data, null, 2);
@@ -690,6 +781,103 @@ window.exportBackup = () => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('⬇️ Backup Downloaded');
+};
+
+// ───────── CATEGORY MANAGER ─────────
+window.openCategoryManager = () => {
+  if(isViewOnly){ toast('👀 View-only mode - editing disabled'); return; }
+  switchCategoryManagerTab('income');
+  $('categoryManagerOverlay').classList.add('active');
+};
+window.closeCategoryManager = () => {
+  $('categoryManagerOverlay').classList.remove('active');
+  resetCategoryForm();
+};
+window.switchCategoryManagerTab = (type) => {
+  categoryManagerType = type;
+  $('catMgrIncomeBtn').classList.toggle('on', type==='income');
+  $('catMgrExpenseBtn').classList.toggle('on', type==='expense');
+  resetCategoryForm();
+  renderCategoryManagerList();
+};
+
+function renderCategoryManagerList(){
+  const list = categories[categoryManagerType] || {};
+  const ids = Object.keys(list);
+  const el = $('categoryManagerList');
+  if(!ids.length){
+    el.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:10px 0;">இன்னும் categories இல்லை — கீழே add பண்ணுங்க.</div>';
+    return;
+  }
+  el.innerHTML = ids.map(id => {
+    const c = list[id];
+    const disabledCls = c.disabled ? ' disabled' : '';
+    return '<div class="cat-mgr-row' + disabledCls + '">' +
+      '<div class="cmr-emoji">' + c.emoji + '</div>' +
+      '<div class="cmr-label">' + esc(c.label) + (c.disabled ? '<div class="cmr-tag">Disabled</div>' : '') + '</div>' +
+      '<div class="cmr-btn" onclick="toggleCategoryDisabled(\'' + id + '\')" title="' + (c.disabled?'Enable':'Disable') + '">' + (c.disabled ? '🔌' : '⏸️') + '</div>' +
+      '<div class="cmr-btn" onclick="startEditCategory(\'' + id + '\')" title="Edit">✏️</div>' +
+      '<div class="cmr-btn danger" onclick="deleteCategoryConfirm(\'' + id + '\')" title="Delete">🗑️</div>' +
+    '</div>';
+  }).join('');
+}
+
+window.startEditCategory = (id) => {
+  const c = categories[categoryManagerType][id];
+  if(!c) return;
+  editingCategoryId = id;
+  $('catEmoji').value = c.emoji;
+  $('catLabel').value = c.label;
+  $('catFormTitle').textContent = '✏️ Edit Category';
+  $('catCancelEditBtn').style.display = 'flex';
+}
+window.resetCategoryForm = () => {
+  editingCategoryId = null;
+  $('catEmoji').value = '';
+  $('catLabel').value = '';
+  $('catFormTitle').textContent = '➕ New Category';
+  $('catCancelEditBtn').style.display = 'none';
+};
+
+window.saveCategoryForm = () => {
+  const emoji = $('catEmoji').value.trim() || '🏷️';
+  const label = $('catLabel').value.trim();
+  if(!label){ toast('⚠️ Category name நிரப்பவும்'); return; }
+
+  const type = categoryManagerType;
+  if(editingCategoryId){
+    db.ref(ROOT + '/categories/' + type + '/' + editingCategoryId).update({ emoji, label })
+      .then(() => { toast('✅ Category Updated'); resetCategoryForm(); })
+      .catch(err => toast('❌ Error: ' + err.message));
+  } else {
+    const newRef = db.ref(ROOT + '/categories/' + type).push();
+    newRef.set({ emoji, label, disabled: false })
+      .then(() => { toast('✅ Category Added'); resetCategoryForm(); })
+      .catch(err => toast('❌ Error: ' + err.message));
+  }
+};
+
+window.toggleCategoryDisabled = (id) => {
+  const type = categoryManagerType;
+  const c = categories[type][id];
+  if(!c) return;
+  db.ref(ROOT + '/categories/' + type + '/' + id + '/disabled').set(!c.disabled)
+    .then(() => toast(c.disabled ? '🔌 Category Enabled' : '⏸️ Category Disabled'))
+    .catch(err => toast('❌ Error: ' + err.message));
+};
+
+window.deleteCategoryConfirm = (id) => {
+  const type = categoryManagerType;
+  const c = categories[type][id];
+  if(!c) return;
+  const usedCount = entries.filter(e => e.category === id).length;
+  const warnMsg = usedCount > 0
+    ? ('"' + c.label + '" category ' + usedCount + ' entries-ல use ஆகுது. Delete பண்ணினாலும் அந்த entries-ல category name "(inactive)" ஆக காட்டப்படும். Delete பண்ணலாமா?')
+    : ('"' + c.label + '" category-ஐ delete பண்ணலாமா?');
+  if(!confirm(warnMsg)) return;
+  db.ref(ROOT + '/categories/' + type + '/' + id).remove()
+    .then(() => toast('🗑️ Category Deleted'))
+    .catch(err => toast('❌ Error: ' + err.message));
 };
 
 // ───────── STATEMENT GENERATION ─────────

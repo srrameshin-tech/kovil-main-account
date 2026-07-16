@@ -400,6 +400,19 @@ let settings = { openingBalance: 0, pin: '1973', viewPin: '' };
 let editingId = null;
 let currentType = 'income';
 let searchQuery = '';
+
+// PIN hashing (SHA-256) — auto-migrates legacy plaintext PINs on next successful use
+async function sha256Hex(str) {
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function isHashFormat(str) { return typeof str === 'string' && /^[a-f0-9]{64}$/i.test(str); }
+async function verifyPin(entered, stored) {
+  if (!stored) return false;
+  if (isHashFormat(stored)) return (await sha256Hex(entered)) === stored;
+  return entered === stored; // legacy plaintext fallback
+}
 let typeFilter = 'all'; // all | income | expense
 let isViewOnly = false;
 let categoryManagerType = 'income'; // which tab is active in category manager
@@ -449,12 +462,20 @@ function toast(msg){
 }
 
 // ───────── LOGIN ─────────
-function doLogin(){
+async function doLogin(){
   const pin = $('loginPin').value.trim();
-  if(pin === settings.pin){
+  if(await verifyPin(pin, settings.pin)){
+    if(!isHashFormat(settings.pin)){
+      const hashed = await sha256Hex(pin);
+      db.ref(`${ROOT}/settings/pin`).set(hashed);
+    }
     isViewOnly = false;
     enterApp('full');
-  } else if(settings.viewPin && pin === settings.viewPin){
+  } else if(settings.viewPin && await verifyPin(pin, settings.viewPin)){
+    if(!isHashFormat(settings.viewPin)){
+      const hashed = await sha256Hex(pin);
+      db.ref(`${ROOT}/settings/viewPin`).set(hashed);
+    }
     isViewOnly = true;
     enterApp('view');
   } else {
@@ -748,18 +769,18 @@ window.saveOpeningBalance = () => {
   toast('✅ Opening Balance Saved');
   closeSettings();
 };
-window.changePin = () => {
+window.changePin = async () => {
   const pin = $('newPin').value.trim();
   if(!pin || pin.length<4){ toast('⚠️ Min 4 digit PIN'); return; }
-  db.ref(ROOT + '/settings/pin').set(pin);
+  db.ref(ROOT + '/settings/pin').set(await sha256Hex(pin));
   toast('✅ Edit PIN Updated');
   closeSettings();
 };
-window.changeViewPin = () => {
+window.changeViewPin = async () => {
   const pin = $('newViewPin').value.trim();
   if(!pin || pin.length<4){ toast('⚠️ Min 4 digit PIN'); return; }
-  if(pin === settings.pin){ toast('⚠️ Edit PIN-ஓட வேற PIN கொடுங்கள்'); return; }
-  db.ref(ROOT + '/settings/viewPin').set(pin);
+  if(await verifyPin(pin, settings.pin)){ toast('⚠️ Edit PIN-ஓட வேற PIN கொடுங்கள்'); return; }
+  db.ref(ROOT + '/settings/viewPin').set(await sha256Hex(pin));
   toast('✅ View PIN Updated');
   closeSettings();
 };
